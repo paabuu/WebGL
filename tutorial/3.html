@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>passing data to webgl shaders</title>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        let gl;
+        const canvas = document.getElementById("canvas");
+        gl = canvas.getContext("webgl");
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.clearColor(0, 0, 1, 1);
+
+        // shaders
+        const vs = `
+            attribute vec4 coords;
+            attribute float pointSize;
+            void main(void) {
+                gl_Position = coords;
+                gl_PointSize = pointSize;
+            }
+        `;
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertexShader, vs);
+        gl.compileShader(vertexShader);
+
+        const fs = `
+            precision mediump float;
+            uniform vec4 color;
+            void main(void) {
+                gl_FragColor = color;
+            }
+        `;
+
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragmentShader, fs);
+        gl.compileShader(fragmentShader);
+
+        let shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+        gl.useProgram(shaderProgram);
+
+        let coords = gl.getAttribLocation(shaderProgram, "coords");
+        gl.vertexAttrib3f(coords, 0.5, 0.5, 0.0);
+        
+        let pointSize = gl.getAttribLocation(shaderProgram, "pointSize");
+        gl.vertexAttrib1f(pointSize, 10.0);
+
+        let color = gl.getUniformLocation(shaderProgram, "color");
+        gl.uniform4f(color, 1.0, 0.0, 0.0, 1.0);
+
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.POINTS, 0, 1);
+    </script>
+</body>
+</html>
