@@ -4,10 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>passing data to webgl shaders</title>
+    <title>rotate</title>
+    <style>
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
+    <canvas id="canvas" width="400" height="400"></canvas>
 
     <script>
         let gl;
@@ -15,14 +21,17 @@
         gl = canvas.getContext("webgl");
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.clearColor(0, 0, 1, 1);
-
+        
         // shaders
         const vs = `
             attribute vec4 coords;
-            attribute float pointSize;
+            uniform float cos_b, sin_b;
+
             void main(void) {
-                gl_Position = coords;
-                gl_PointSize = pointSize;
+                gl_Position.x = coords.x * cos_b - coords.y * sin_b;
+                gl_Position.y = coords.x * sin_b + coords.y * cos_b;
+                gl_Position.z = coords.z;
+                gl_Position.w = 1.0;
             }
         `;
         const vertexShader = gl.createShader(gl.VERTEX_SHADER);
@@ -48,16 +57,31 @@
         gl.useProgram(shaderProgram);
 
         let coords = gl.getAttribLocation(shaderProgram, "coords");
-        gl.vertexAttrib3f(coords, 0.0, 0.0, 0.0);
-        
-        let pointSize = gl.getAttribLocation(shaderProgram, "pointSize");
-        gl.vertexAttrib1f(pointSize, 10.0);
+        let cos_b = gl.getUniformLocation(shaderProgram, "cos_b");
+        let sin_b = gl.getUniformLocation(shaderProgram, "sin_b");
+
+        const ANGLE = transAngle(45);
+        gl.uniform1f(cos_b, Math.cos(ANGLE));
+        gl.uniform1f(sin_b, Math.sin(ANGLE));
 
         let color = gl.getUniformLocation(shaderProgram, "color");
         gl.uniform4f(color, 1.0, 1.0, 0.0, 1.0);
 
+        // 创建缓冲区
+        const vertices = new Float32Array([0.0, 0.0, 0.0, -0.5, 0.5, 0.0]);
+
+        const vertexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+        gl.vertexAttribPointer(coords, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(coords);
+
         gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.drawArrays(gl.POINTS, 0, 1);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+        function transAngle(angle) {
+            return Math.PI * angle / 180;
+        }
 
     </script>
 </body>

@@ -4,18 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>passing data to webgl shaders</title>
+    <title>click event</title>
+    <style>
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
+    <canvas id="canvas" width="800" height="400"></canvas>
 
     <script>
         let gl;
+        const pos = [];
+        const colors = [];
         const canvas = document.getElementById("canvas");
         gl = canvas.getContext("webgl");
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.clearColor(0, 0, 1, 1);
-
+        
         // shaders
         const vs = `
             attribute vec4 coords;
@@ -58,6 +66,35 @@
 
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.POINTS, 0, 1);
+
+        canvas.addEventListener("mousedown", e => click(e, gl, canvas, coords, color));
+
+        function click(e, gl, canvas, coord, color) {
+            const clientX = e.clientX;
+            const clientY = e.clientY;
+
+            const rect = e.target.getBoundingClientRect();
+
+            const x = (clientX - rect.left - canvas.width / 2) / (canvas.width / 2);
+            const y = (canvas.height / 2 - (clientY - rect.top)) / (canvas.height / 2);
+
+            pos.push({x, y});
+            if (x >= 0.0 && y >= 0.0) {
+                colors.push([1.0, 0.0, 0.0, 1.0]);
+            } else if (x < 0.0 && y < 0.0) {
+                colors.push([0.0, 1.0, 0.0, 1.0]);
+            } else {
+                colors.push([1.0, 1.0, 1.0, 1.0]);
+            }
+
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            pos.forEach((item, i) => {
+                gl.vertexAttrib3f(coord, item.x, item.y, 0.0);
+                gl.uniform4f(color, colors[i][0], colors[i][1], colors[i][2], colors[i][3]);
+                gl.drawArrays(gl.POINTS, 0, 1);
+            });
+        }
 
     </script>
 </body>
