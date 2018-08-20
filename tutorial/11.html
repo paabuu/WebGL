@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>cuon matrix</title>
+    <style>
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+    <script src="./cuon-matrix.js"></script>
+</head>
+<body>
+    <canvas id="canvas" width="400" height="400"></canvas>
+    <script>
+        let gl;
+        const canvas = document.getElementById("canvas");
+        gl = canvas.getContext("webgl");
+
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.clearColor(0, 0, 1, 1);
+
+        const vs = `
+            attribute vec4 coords;
+            uniform mat4 form_matrix;
+
+            void main(void) {
+                gl_Position = form_matrix * coords;
+            }
+        `;
+
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertexShader, vs);
+        gl.compileShader(vertexShader);
+
+        const fs = `
+            precision mediump float;
+            uniform vec4 color;
+            void main(void) {
+                gl_FragColor = color;
+            }
+        `;
+
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragmentShader, fs);
+        gl.compileShader(fragmentShader);
+
+        const shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+        gl.useProgram(shaderProgram);
+
+        const coords = gl.getAttribLocation(shaderProgram, "coords");
+        const matrix = gl.getUniformLocation(shaderProgram, "form_matrix");
+        const xformMatrix = new Matrix4();
+        // xformMatrix.setTranslate(0.5, 0.5, 0);
+        xformMatrix.rotate(0, 0, 0, 1);
+
+        // gl.uniformMatrix4fv(matrix, false, xformMatrix.elements);
+        const color = gl.getUniformLocation(shaderProgram, "color");
+        gl.uniform4f(color, 1.0, 1.0, 0.0, 1.0);
+
+        const vertices = new Float32Array([0.0, 0.0, 0.0, -0.5, 0.5, 0.0]);
+        const vertexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+        gl.vertexAttribPointer(coords, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(coords);
+
+        let currentAngle = 0.0;
+        let startTime = Date.now();
+        let speed = 18;
+        tick();
+
+        function tick() {
+            currentAngle = animate(currentAngle);
+            xformMatrix.rotate(currentAngle, 0, 0, 1);
+
+            gl.uniformMatrix4fv(matrix, false, xformMatrix.elements);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+            requestAnimationFrame(tick);
+        }
+        function animate(angle) {
+            const now = Date.now();
+            const t = now - startTime;
+            startTime = now;
+
+            return (angle + speed * t / 1000) % 360;
+        }
+    </script>
+</body>
+</html>

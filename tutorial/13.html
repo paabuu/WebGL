@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>texture</title>
+    <style>
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="400" height="400"></canvas>
+
+    <script>
+        let gl;
+        const canvas = document.getElementById("canvas");
+        gl = canvas.getContext("webgl");
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.clearColor(0, 0, 1, 1);
+        
+        // shaders
+        const vs = `
+            attribute vec4 coords;
+            attribute vec2 a_TexCoord;
+            varying vec2 v_TexCoord;
+
+            void main(void) {
+                gl_Position = coords;
+                v_TexCoord = a_TexCoord;
+            }
+        `;
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertexShader, vs);
+        gl.compileShader(vertexShader);
+
+        const fs = `
+            precision mediump float;
+            uniform sampler2D u_Sampler;
+            varying vec2 v_TexCoord;
+
+            void main(void) {
+                gl_FragColor = texture2D(u_Sampler, v_TexCoord);
+            }
+        `;
+
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragmentShader, fs);
+        gl.compileShader(fragmentShader);
+
+        let shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+        gl.useProgram(shaderProgram);
+
+        const coords = gl.getAttribLocation(shaderProgram, "coords");
+        const texCoords = gl.getAttribLocation(shaderProgram, "a_TexCoord");
+        
+        // 创建缓冲区
+        const vertices = new Float32Array([
+            -0.5, 0.5, 0.0, 1.0,
+            -0.5, -0.5, 0.0, 0.0,
+            0.5, 0.5, 1.0, 1.0,
+            0.5, -0.5, 1.0, 0.0
+        ]);
+        const FSIZE = vertices.BYTES_PER_ELEMENT;
+
+        const vertexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+        gl.vertexAttribPointer(coords, 2, gl.FLOAT, false, FSIZE * 4, 0);
+        gl.vertexAttribPointer(texCoords, 2, gl.FLOAT, false, FSIZE * 4, FSIZE * 2);
+        gl.enableVertexAttribArray(coords);
+        gl.enableVertexAttribArray(texCoords);
+
+        initTexture();
+        
+        function initTexture() {
+            const texture = gl.createTexture();
+            const u_Sampler = gl.getUniformLocation(shaderProgram, "u_Sampler");
+            const image = new Image();
+            image.src = "./a.jpg";
+            image.onload = function() {
+                loadTexture(texture, u_Sampler, image);
+            }
+        }
+
+        function loadTexture(texture, u_Sampler, image) {
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+            gl.uniform1i(u_Sampler, 0);
+
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
+    </script>
+</body>
+</html>
